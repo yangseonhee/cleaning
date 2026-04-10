@@ -23,6 +23,7 @@
         
         .font-hand { font-family: 'Nanum Brush Script', cursive; font-size: 1.6rem; }
         
+        /* Grid Table Style */
         .grid-container {
             display: grid;
             grid-template-columns: 50px minmax(200px, 1fr) repeat(5, 70px) 180px;
@@ -59,17 +60,6 @@
         .status-ok { color: #2563eb; }
         .status-bad { color: #dc2626; font-weight: bold; }
 
-        #loadingOverlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(255,255,255,0.95);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 100;
-        }
-
         @media print {
             @page { size: A4 portrait; margin: 10mm; }
             body { background: white; padding: 0; margin: 0; }
@@ -86,11 +76,7 @@
 </head>
 <body class="antialiased">
 
-    <div id="loadingOverlay">
-        <div class="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
-        <p class="text-slate-600 font-medium">프로그램을 준비 중입니다...</p>
-    </div>
-
+    <!-- Web Interface -->
     <div class="max-w-6xl mx-auto my-4 lg:my-8 px-4 no-print">
         <div class="bg-white shadow-2xl rounded-3xl overflow-hidden border border-slate-200">
             <header class="bg-slate-900 text-white p-6">
@@ -98,7 +84,7 @@
                     <div>
                         <div class="flex items-center gap-3">
                             <h1 class="text-2xl font-bold tracking-tight" id="displaySchool">순천부영초등학교</h1>
-                            <span id="syncBadge" class="bg-emerald-500 text-[10px] px-2 py-0.5 rounded-full uppercase tracking-widest font-bold">Local Save Mode</span>
+                            <span class="bg-emerald-500 text-[10px] px-2 py-0.5 rounded-full uppercase tracking-widest font-bold">Fast Local Mode</span>
                         </div>
                         <p class="text-slate-400 text-sm mt-1">주간 위생 및 청소 통합 관리 시스템</p>
                     </div>
@@ -117,7 +103,7 @@
                 
                 <div class="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 bg-slate-800/50 p-4 rounded-2xl border border-white/5">
                     <div class="space-y-1">
-                        <label class="text-[10px] font-bold text-slate-400 uppercase">점검 기준일 선택</label>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase">점검 기준일 선택 (해당 주 선택)</label>
                         <input type="date" id="weekPicker" onchange="changeWeek()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
                     </div>
                     <div class="space-y-1 lg:col-span-2">
@@ -147,7 +133,7 @@
                 <div id="hygiene" class="tab-content overflow-x-auto">
                     <div class="grid-container min-w-[800px]" id="hygieneGrid"></div>
                 </div>
-                <div id="cleaning" class="tab-content hidden overflow-x-auto text-center py-20 text-slate-400 text-sm">청소 점검 항목을 준비 중입니다.</div>
+                <div id="cleaning" class="tab-content hidden overflow-x-auto text-center py-20 text-slate-400 text-sm italic">청소 점검 항목은 추후 업데이트 예정입니다.</div>
             </div>
         </div>
     </div>
@@ -176,12 +162,13 @@
 
     <div id="toast" class="fixed bottom-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white px-6 py-3 rounded-2xl shadow-2xl opacity-0 transition-all z-[100] pointer-events-none text-sm"></div>
 
+    <!-- Print Layout (A4) -->
     <div class="hidden print-only" id="printLayout">
         <div class="print-page">
             <div class="print-title">주간 위생 점검표</div>
             <div class="flex justify-between mb-2 font-bold text-sm">
-                <div>기관명: <span class="p-school underline"></span></div>
-                <div>점검기간: <span class="p-range underline"></span></div>
+                <div>기관명: <span class="p-school underline px-2"></span></div>
+                <div>점검기간: <span class="p-range underline px-2"></span></div>
             </div>
             <table>
                 <thead>
@@ -192,14 +179,13 @@
                 <tbody id="pBodyHygiene"></tbody>
             </table>
             <div class="flex justify-end gap-12 mt-6 font-bold">
-                <span>작성자: <span class="p-cook underline px-4"></span> (인)</span>
-                <span>확인자: <span class="p-approver underline px-4"></span> (인)</span>
+                <span>작성자: <span class="p-cook underline px-6"></span> (인)</span>
+                <span>확인자: <span class="p-approver underline px-6"></span> (인)</span>
             </div>
         </div>
     </div>
 
     <script>
-        // --- Core Logic (LocalStorage Only for GitHub Simplicity) ---
         const hTasks = [
             "건강상태(설사, 발열, 구토) 여부 확인", "손가락의 상처 및 화농성 질환 유무", "위생복, 위생모, 위생화 착용 상태",
             "손 세척 및 소독(배식 전 필수) 실시", "손톱의 청결상태 및 액세서리 착용 유무", "조리원 심리적 안도감",
@@ -234,110 +220,22 @@
             const mondayKey = getMonday(today);
             document.getElementById('weekPicker').value = mondayKey;
             loadData(mondayKey);
-            document.getElementById('loadingOverlay').style.display = 'none';
         }
 
         function loadData(weekKey) {
-            const local = localStorage.getItem(`hygiene_${weekKey}`);
-            if (local) state.currentWeekData = JSON.parse(local);
-            else resetData();
+            const saved = localStorage.getItem(`hygiene_data_${weekKey}`);
+            if (saved) {
+                state.currentWeekData = JSON.parse(saved);
+            } else {
+                state.currentWeekData = { hygiene: { checks: hTasks.map(() => Array(5).fill("")), notes: hTasks.map(() => "") } };
+            }
             render();
-        }
-
-        function resetData() {
-            state.currentWeekData = { hygiene: { checks: hTasks.map(() => Array(5).fill("")), notes: hTasks.map(() => "") } };
         }
 
         window.render = function() {
             const container = document.getElementById('hygieneGrid');
             const data = state.currentWeekData.hygiene;
             let html = `<div class="grid-cell grid-header">No</div><div class="grid-cell grid-header">점검사항</div><div class="grid-cell grid-header">월</div><div class="grid-cell grid-header">화</div><div class="grid-cell grid-header">수</div><div class="grid-cell grid-header">목</div><div class="grid-cell grid-header">금</div><div class="grid-cell grid-header">비고</div>`;
-            hTasks.forEach((task, i) => {
-                html += `<div class="grid-cell bg-slate-50 font-bold text-slate-400">${i+1}</div><div class="grid-cell justify-start px-4 text-slate-700 font-medium">${task}</div>`;
-                for(let d=0; d<5; d++) {
-                    const val = data.checks[i][d] || "";
-                    const cls = val === '양호' ? 'status-ok' : (val === '미흡' ? 'status-bad' : '');
-                    html += `<div class="grid-cell p-0"><div class="clickable-cell font-hand ${cls}" onclick="window.cycleCell(${i}, ${d})">${val}</div></div>`;
-                }
-                html += `<div class="grid-cell p-1"><input type="text" value="${data.notes[i] || ''}" onchange="window.updateNote(${i}, this.value)" class="w-full h-full bg-slate-50/50 rounded-lg px-2 text-xs outline-none focus:bg-white border border-transparent"></div>`;
-            });
-            container.innerHTML = html;
             
-            // Print Rendering
-            let pBody = "";
             hTasks.forEach((task, i) => {
-                pBody += `<tr><td>${i+1}</td><td class="col-task">${task}</td>`;
-                for(let d=0; d<5; d++) pBody += `<td class="font-hand-print">${data.checks[i][d] || ""}</td>`;
-                pBody += `<td>${data.notes[i] || ""}</td></tr>`;
-            });
-            document.getElementById('pBodyHygiene').innerHTML = pBody;
-            updateDisplay();
-        };
-
-        window.cycleCell = (row, col) => {
-            const cur = state.currentWeekData.hygiene.checks[row][col];
-            state.currentWeekData.hygiene.checks[row][col] = cur === "" ? "양호" : (cur === "양호" ? "미흡" : "");
-            sync(false); render();
-        };
-
-        window.updateNote = (row, val) => {
-            state.currentWeekData.hygiene.notes[row] = val;
-            sync(false);
-        };
-
-        window.sync = (showMsg) => {
-            const weekKey = document.getElementById('weekPicker').value;
-            localStorage.setItem(`hygiene_${weekKey}`, JSON.stringify(state.currentWeekData));
-            if(showMsg) showToast("브라우저에 저장되었습니다.");
-        };
-
-        window.checkAllDay = (col) => {
-            const data = state.currentWeekData.hygiene.checks;
-            const isAllOk = data.every(row => row[col] === "양호");
-            data.forEach(row => row[col] = isAllOk ? "" : "양호");
-            sync(false); render();
-        };
-
-        window.resetWeekData = () => { if(confirm("초기화하시겠습니까?")) { resetData(); sync(true); render(); } };
-
-        window.changeWeek = () => {
-            const picker = document.getElementById('weekPicker');
-            const mondayKey = getMonday(picker.value);
-            picker.value = mondayKey;
-            loadData(mondayKey);
-        };
-
-        function updateDisplay() {
-            const info = state.info;
-            document.getElementById('displaySchool').innerText = info.school;
-            document.getElementById('schoolInput').value = info.school;
-            document.getElementById('cookInput').value = info.cook;
-            document.getElementById('approverInput').value = info.approver;
-            document.querySelectorAll('.p-school').forEach(el => el.innerText = info.school);
-            document.querySelectorAll('.p-cook').forEach(el => el.innerText = info.cook || "(미작성)");
-            document.querySelectorAll('.p-approver').forEach(el => el.innerText = info.approver);
-            const monStr = document.getElementById('weekPicker').value;
-            const mon = new Date(monStr);
-            const fri = new Date(mon); fri.setDate(mon.getDate() + 4);
-            const range = `${mon.getFullYear()}.${mon.getMonth()+1}.${mon.getDate()} ~ ${fri.getFullYear()}.${fri.getMonth()+1}.${fri.getDate()}`;
-            document.getElementById('weekRangeDisplay').innerText = range;
-        }
-
-        window.toggleSettings = () => document.getElementById('settingsModal').classList.toggle('hidden');
-        window.saveSettings = () => {
-            state.info = { school: document.getElementById('schoolInput').value, cook: document.getElementById('cookInput').value, approver: document.getElementById('approverInput').value };
-            localStorage.setItem('school', state.info.school);
-            localStorage.setItem('cook', state.info.cook);
-            localStorage.setItem('approver', state.info.approver);
-            updateDisplay(); toggleSettings(); showToast("저장되었습니다.");
-        };
-
-        function showToast(m) {
-            const t = document.getElementById('toast'); t.innerText = m; t.style.opacity = '1';
-            setTimeout(() => t.style.opacity = '0', 2000);
-        }
-
-        window.onload = init;
-    </script>
-</body>
-</html>
+                html += `<div class="grid-cell bg-slate-50 font-bold text-slate-400">${i+1}</div><div class="grid-cell justify-start px-4 text-slate-7
